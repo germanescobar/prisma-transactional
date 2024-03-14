@@ -1,5 +1,5 @@
 {
-  "name": "prisma-transactional",
+  "name": "@germanescobar/prisma-transactional",
   "version": "0.1.0",
   "description": "Adds support for prisma transactions across functions",
   "main": "./dist/index.js",
@@ -14,6 +14,10 @@
   },
   "author": "Germán Escobar",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+"
+  },
   "devDependencies": {
     "@prisma/client": "^5.11.0",
     "@types/node": "^20.11.27",
