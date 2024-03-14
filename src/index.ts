@@ -6,7 +6,7 @@ export type Context = {
 }
 
 export type PrismaProxyOptions = {
-  enableSavePoints: boolean
+  enableSavepoints: boolean
 }
 
 /**
@@ -18,8 +18,8 @@ export type PrismaProxyOptions = {
  *          enableSavePoints: if true (default), it will use SAVEPOINTS to support nested transactions.
  * @returns 
  */
-export default function createPrismaProxy<T extends Context>(client: PrismaClient, asyncLocalStorage: AsyncLocalStorage<T>, options: PrismaProxyOptions = { enableSavePoints: true }) {
-  const createNestedTransaction = createNestedTransactionHandler(client, options.enableSavePoints);
+export default function createPrismaProxy<T extends Context>(client: PrismaClient, asyncLocalStorage: AsyncLocalStorage<T>, options: PrismaProxyOptions = { enableSavepoints: true }) {
+  const createNestedTransaction = createNestedTransactionHandler(client, options.enableSavepoints);
 
   const proxy = new Proxy(client, {
     /**
@@ -33,7 +33,7 @@ export default function createPrismaProxy<T extends Context>(client: PrismaClien
       if (prop === '$transaction') {
         if (!tx) {
           return createTransactionHandler(asyncLocalStorage, target, prop)
-        } else if (options.enableSavePoints) {
+        } else if (options.enableSavepoints) {
           return createNestedTransaction; 
         }
       }
@@ -68,11 +68,11 @@ function createTransactionHandler<T extends Context>(asyncLocalStorage: AsyncLoc
 /**
  * Used to support nested transactions. Adapted from the jest-prisma project.
  */
-function createNestedTransactionHandler(parentTxClient: PrismaClient, enableNestedTransactions: boolean) {
+function createNestedTransactionHandler(parentTxClient: PrismaClient, enableSavepoints: boolean) {
   let seq = 1;
   const createNestedTransaction = async (arg: PromiseLike<unknown>[] | ((client: PrismaClient) => Promise<unknown>)) => {
     const savePointId = `test_${seq++}`;
-    if (enableNestedTransactions) {
+    if (enableSavepoints) {
       await parentTxClient.$executeRawUnsafe(`SAVEPOINT ${savePointId};`);
     }
     if (Array.isArray(arg)) {
@@ -82,12 +82,12 @@ function createNestedTransactionHandler(parentTxClient: PrismaClient, enableNest
           const result = await prismaPromise;
           results.push(result);
         }
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           await parentTxClient.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
         }
         return results;
       } catch (err) {
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           await parentTxClient.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savePointId};`);
         }
         throw err;
@@ -95,12 +95,12 @@ function createNestedTransactionHandler(parentTxClient: PrismaClient, enableNest
     } else {
       try {
         const result = await arg(parentTxClient);
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           await parentTxClient.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
         }
         return result;
       } catch (err) {
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           await parentTxClient.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savePointId};`);
         }
         throw err;
