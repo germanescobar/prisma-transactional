@@ -43,8 +43,12 @@ async function transfer(from, to, amount) {
 }
 ```
 
-To support savepoints ("nested transactions") use the `enableSavepoints` option:
+To disable savepoints ("nested transactions") use the `enableSavepoints` option (they are enabled by default):
 
 ```typescript
-const prisma = createPrismaTransactionalProxy(originalPrisma, asyncLocalStorage, { enableSavepoints: true });
+const prisma = createPrismaTransactionalProxy(
+  originalPrisma, 
+  asyncLocalStorage, 
+  { enableSavepoints: false } // disables savepoints
+);
 ```
