@@ -60,3 +60,21 @@ test('transaction rolls back in a failed money transfer scenario', async () => {
     expect(toAccount.balance).toBe(100)
   }
 });
+
+test('support array of promises in $transaction', async () => {
+  const asyncLocalStorage = new AsyncLocalStorage<Context>();
+  const originalPrisma = new PrismaClient()
+  const prisma = createPrismaProxy(originalPrisma, asyncLocalStorage);
+
+  await prisma.account.deleteMany();
+
+  await prisma.$transaction([
+    prisma.account.create({ data: { id: '111', balance: 100 }}),
+    prisma.account.create({ data: { id: '222', balance: 100 }}),
+  ]);
+
+  const fromAccount = await prisma.account.findUniqueOrThrow({ where: { id: '111' }});
+  const toAccount = await prisma.account.findUniqueOrThrow({ where: { id: '222' }});
+  expect(fromAccount.balance).toBe(100);
+  expect(toAccount.balance).toBe(100);
+});

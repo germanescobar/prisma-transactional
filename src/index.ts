@@ -56,12 +56,17 @@ function createTransactionHandler<T extends Context>(asyncLocalStorage: AsyncLoc
   const $transaction = Reflect.get<PrismaClient, string>(target, prop);
 
   // return a modified version that stores the transaction in the asyncLocalStorage
-  return async function(fn: (tx: PrismaClient) => Promise<any>) {
-    return await $transaction.call(target, async (tx: PrismaClient) => {
-      return await asyncLocalStorage.run({ tx } as T, () => {
-        return fn(tx);
+  return async function(arg: (tx: PrismaClient) => Promise<any> | PromiseLike<unknown>[]) {
+    if (Array.isArray(arg)) {
+      // just delegate to the original $transaction
+      return $transaction.call(target, arg);
+    } else {
+      return await $transaction.call(target, async (tx: PrismaClient) => {
+        return await asyncLocalStorage.run({ tx } as T, () => {
+          return arg(tx);
+        });
       });
-    });
+    }
   }
 }
 
