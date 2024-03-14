@@ -1,6 +1,6 @@
 {
   "name": "@germanescobar/prisma-transactional",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Adds support for prisma transactions across functions",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
