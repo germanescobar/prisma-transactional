@@ -1,8 +1,10 @@
-# Prisma Transactional Context for PostgreSQL
+# Prisma Transactional Context
 
-This package adds support for transactions across functions without having to explicitly pass it around (argument drilling).
+This package adds support for transactions across functions without having to explicitly pass them around (argument drilling).
 
-Underneath, it uses the AsyncLocalStorage to store the transaction and Proxy to wrap the prisma client.
+Underneath, it uses the [AsyncLocalStorage](https://nodejs.org/api/async_context.html) to store the transaction and [Proxy object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) to wrap the prisma client.
+
+It also supports [**savepoints**](https://en.wikipedia.org/wiki/Savepoint) to mimic nested transactions in databases that support this feature (tested in PostgreSQL only for now). **Savepoints** are enable by default, see below on how to disable them.
 
 ## Installation
 
@@ -39,4 +41,10 @@ async function transfer(from, to, amount) {
   const toAccount = await prisma.account.findUniqueOrThrow({ where: { id: to }});
   await prisma.account.update({ where: { id: to }, data: { balance: toAccount.balance + amount } });
 }
+```
+
+To support savepoints ("nested transactions") use the `enableSavePoints` option:
+
+```typescript
+const prisma = createPrismaTransactionalProxy(originalPrisma, asyncLocalStorage, { enableSavePoints: true });
 ```

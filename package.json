@@ -16,8 +16,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+"
+    "url": "https://github.com/germanescobar/prisma-transactional"
   },
+  "keywords": [
+    "prisma",
+    "transaction",
+    "postgresql"
+  ],
   "devDependencies": {
     "@prisma/client": "^5.11.0",
     "@types/node": "^20.11.27",
