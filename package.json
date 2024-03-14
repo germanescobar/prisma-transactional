@@ -1,6 +1,6 @@
 {
   "name": "@germanescobar/prisma-transactional",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Adds support for prisma transactions across functions",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/germanescobar/prisma-transactional"
+    "url": "https://github.com/germanescobar/prisma-transactional.git"
   },
   "keywords": [
     "prisma",
