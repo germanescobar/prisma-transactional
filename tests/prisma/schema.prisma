@@ -1,0 +1,13 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://germanescobar:@localhost:5432/prisma-transactions-test"
+}
+
+model Account {
+  id        String   @id
+  balance   Int
+}
