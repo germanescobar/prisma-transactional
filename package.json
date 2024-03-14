@@ -1,0 +1,14 @@
+{
+  "name": "prisma-transactional",
+  "version": "0.1.0",
+  "description": "Adds support for prisma transactions across functions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.4.2"
+  }
+}
