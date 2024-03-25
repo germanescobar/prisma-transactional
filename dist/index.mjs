@@ -20,8 +20,8 @@ var __async = (__this, __arguments, generator) => {
 };
 
 // src/index.ts
-function createPrismaProxy(client, asyncLocalStorage, options = { enableSavePoints: true }) {
-  const createNestedTransaction = createNestedTransactionHandler(client, options.enableSavePoints);
+function createPrismaProxy(client, asyncLocalStorage, options = { enableSavepoints: true }) {
+  const createNestedTransaction = createNestedTransactionHandler(client, options.enableSavepoints);
   const proxy = new Proxy(client, {
     /**
      * Intercepts access to all properties of the PrismaClient instance. If there's a transaction 
@@ -35,7 +35,7 @@ function createPrismaProxy(client, asyncLocalStorage, options = { enableSavePoin
       if (prop === "$transaction") {
         if (!tx) {
           return createTransactionHandler(asyncLocalStorage, target, prop);
-        } else if (options.enableSavePoints) {
+        } else if (options.enableSavepoints) {
           return createNestedTransaction;
         }
       }
@@ -46,21 +46,26 @@ function createPrismaProxy(client, asyncLocalStorage, options = { enableSavePoin
 }
 function createTransactionHandler(asyncLocalStorage, target, prop) {
   const $transaction = Reflect.get(target, prop);
-  return function(fn) {
+  return function(arg) {
     return __async(this, null, function* () {
-      return yield $transaction.call(target, (tx) => __async(this, null, function* () {
-        return yield asyncLocalStorage.run({ tx }, () => {
-          return fn(tx);
-        });
-      }));
+      console.log(typeof arg);
+      if (Array.isArray(arg)) {
+        return $transaction.call(target, arg);
+      } else {
+        return yield $transaction.call(target, (tx) => __async(this, null, function* () {
+          return yield asyncLocalStorage.run({ tx }, () => {
+            return arg(tx);
+          });
+        }));
+      }
     });
   };
 }
-function createNestedTransactionHandler(parentTxClient, enableNestedTransactions) {
+function createNestedTransactionHandler(parentTxClient, enableSavepoints) {
   let seq = 1;
   const createNestedTransaction = (arg) => __async(this, null, function* () {
     const savePointId = `test_${seq++}`;
-    if (enableNestedTransactions) {
+    if (enableSavepoints) {
       yield parentTxClient.$executeRawUnsafe(`SAVEPOINT ${savePointId};`);
     }
     if (Array.isArray(arg)) {
@@ -70,12 +75,12 @@ function createNestedTransactionHandler(parentTxClient, enableNestedTransactions
           const result = yield prismaPromise;
           results.push(result);
         }
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           yield parentTxClient.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
         }
         return results;
       } catch (err) {
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           yield parentTxClient.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savePointId};`);
         }
         throw err;
@@ -83,12 +88,12 @@ function createNestedTransactionHandler(parentTxClient, enableNestedTransactions
     } else {
       try {
         const result = yield arg(parentTxClient);
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           yield parentTxClient.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
         }
         return result;
       } catch (err) {
-        if (enableNestedTransactions) {
+        if (enableSavepoints) {
           yield parentTxClient.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savePointId};`);
         }
         throw err;

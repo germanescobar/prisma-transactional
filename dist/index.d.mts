@@ -7,7 +7,7 @@ type Context = {
     tx: Partial<PrismaClient>;
 };
 type PrismaProxyOptions = {
-    enableSavePoints: boolean;
+    enableSavepoints: boolean;
 };
 /**
  * Returns an proxy of PrismaClient that can be used to run transactions across functions.
