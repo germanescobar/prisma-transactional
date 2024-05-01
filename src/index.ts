@@ -19,8 +19,6 @@ export type PrismaProxyOptions = {
  * @returns 
  */
 export default function createPrismaProxy<T extends Context>(client: PrismaClient, asyncLocalStorage: AsyncLocalStorage<T>, options: PrismaProxyOptions = { enableSavepoints: true }) {
-  const createNestedTransaction = createNestedTransactionHandler(client, options.enableSavepoints);
-
   const proxy = new Proxy(client, {
     /**
      * Intercepts access to all properties of the PrismaClient instance. If there's a transaction 
@@ -34,7 +32,7 @@ export default function createPrismaProxy<T extends Context>(client: PrismaClien
         if (!tx) {
           return createTransactionHandler(asyncLocalStorage, target, prop)
         } else if (options.enableSavepoints) {
-          return createNestedTransaction; 
+          return createNestedTransactionHandler(tx as PrismaClient, options.enableSavepoints);
         }
       }
       return Reflect.get(tx ?? target, prop);
@@ -73,44 +71,37 @@ function createTransactionHandler<T extends Context>(asyncLocalStorage: AsyncLoc
 /**
  * Used to support nested transactions. Adapted from the jest-prisma project.
  */
-function createNestedTransactionHandler(parentTxClient: PrismaClient, enableSavepoints: boolean) {
+function createNestedTransactionHandler(tx: PrismaClient, enableSavepoints: boolean) {
   let seq = 1;
-  const createNestedTransaction = async (arg: PromiseLike<unknown>[] | ((client: PrismaClient) => Promise<unknown>)) => {
+  return async (arg: PromiseLike<unknown>[] | ((_: PrismaClient) => Promise<unknown>)) => {
     const savePointId = `test_${seq++}`;
     if (enableSavepoints) {
-      await parentTxClient.$executeRawUnsafe(`SAVEPOINT ${savePointId};`);
+      await tx.$executeRawUnsafe(`SAVEPOINT ${savePointId};`);
     }
-    if (Array.isArray(arg)) {
-      try {
+
+    try {
+      if (Array.isArray(arg)) {
         const results = [] as unknown[];
         for (const prismaPromise of arg) {
           const result = await prismaPromise;
           results.push(result);
         }
         if (enableSavepoints) {
-          await parentTxClient.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
+          await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
         }
         return results;
-      } catch (err) {
+      } else {
+        const result = await arg(tx);
         if (enableSavepoints) {
-          await parentTxClient.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savePointId};`);
-        }
-        throw err;
-      }
-    } else {
-      try {
-        const result = await arg(parentTxClient);
-        if (enableSavepoints) {
-          await parentTxClient.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
+          await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${savePointId};`);
         }
         return result;
-      } catch (err) {
-        if (enableSavepoints) {
-          await parentTxClient.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savePointId};`);
-        }
-        throw err;
       }
+    } catch (err) {
+      if (enableSavepoints) {
+        await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savePointId};`);
+      }
+      throw err;
     }
   };
-  return createNestedTransaction;
 }
